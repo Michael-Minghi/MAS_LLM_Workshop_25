@@ -1,7 +1,7 @@
 import base64
 import json
 from dotenv import load_dotenv
-from ria.prompts import load_prompt
+from ria.instructions import load_prompt
 from ria.utils import ModelingContext
 import os
 from typing import Annotated
@@ -18,7 +18,9 @@ from pydantic import BaseModel, Field, ValidationError, AfterValidator
 
 load_dotenv(override=True)
 
-#MODEL_NAME_DEFAULT = "gpt-4o"
+# 01 -- DEFINE THE LLM MODEL AND OTHER CONSTANTS.
+#__________________________________________________________________________________________
+
 MODEL_NAME_DEFAULT = "gpt-5"
 INPUT_IMAGE_COUNT = 5
 
@@ -48,67 +50,56 @@ def check_scores(scores: list[int] | None):
                 raise ValueError("Score must be between 1 and 5")
     return scores
 
-# Scores = Annotated[list[int], AfterValidator(check_scores)]
+# 02 -- STATE ONE CLASS PER EACH METRIC YOU WANT TO EVALUATE. HERE IS A SAMPLE:
+#__________________________________________________________________________________________
 
 class ImprovementTarget(str, Enum):
-    DESIGN_DRIVER = "design_driver"
-    DESIGN_TASK = "design_task"
+    DESIGN_CONCEPT = "design_concept"
     DESIGN_MODELING = "design_modeling"
+    DESIGN_GEOMETRY = "design_geometry"
 
 class ConceptStrength(BaseModel):
     scores: int | None = Field(
         default=None,
-        description="What's the overall strength and quality of the design concept, according to the guidelines in the system prompt? Ranging from 1 to 5. Low score=1: The design concept is bland, not evocative and does not represent the chosen material categories. Also, you cannot tell if the strategy was continuity or disruption. High score=5: The design concept is strong, formally and spatially evocative and is clearly specific to the chosen material and material categories. It also shows clearly the continuity or disruption strategy. BE STRICT WITH THE SCORES, THE GOAL IS TO IDENTIFY WEAKNESSES AND IMPROVE THEM.",
+        description="What's the overall strength and quality of the design concept? Ranging from 1 to 5. Low score=1: The design concept is not evocative and does not provide clear instructions to model the geometry. High score=5: The design concept is strong, formally evocative and suggests specific modeling strategies.",
     )
     explanation: str | None = Field(
         default=None,
-        description="Explain your reasoning for the scores given above. Provide specific observations (referencing the rendered image if necessary) that support your evaluation of the design concept strength.",
+        description="Explain your reasoning for the scores given above, in 2-3 concise sentences. Provide specific observations that support your evaluation.",
     )
-
-class MaterialCoherence(BaseModel):
+class ModelingStrategy(BaseModel):
     scores: int | None = Field(
         default=None,
-        description="Are the words chosen for the material categories semantically coherent and lexically diverse? How well do they represent the material's specific processes and evoke a material strategy? Ranging from 1 to 5. Low score=1: The results are unaligned, repetitive and evoke very bland or generic material strategies. High score=5: The alignment is excellent semantically, lexically and architecturally. The words are varied and evoke specific material strategies that uniquely inform the design concept. BE STRICT WITH THE SCORES, THE GOAL IS TO IDENTIFY WEAKNESSES AND IMPROVE THEM.",
+        description="How clear is the relationship between the .py function used to model the geometry, the design concept and the object rendered in the image? Ranging from 1 to 5. Low score=1: The .py function steps are not easily relatable with the attributes suggested in the design concept nor with the generated object. High score=5: The modeling steps in the .py function clearly reflect the attributes of the design concept and allow a successful modeling of the object.",
     )
     explanation: str | None = Field(
         default=None,
-        description="Explain your reasoning for the scores given above. Provide specific observations that support your evaluation of the material chart coherence.",
+        description="Explain your reasoning for the scores given above, in 2-3 concise sentences. Provide specific observations that support your evaluation.",
     )
-
-class DesignTaskQuality(BaseModel):
+class GeometricAlignment(BaseModel):
     scores: int | None = Field(
         default=None,
-        description="What's the overall quality of the design task, according to the guidelines in the system prompt? Can the step-by-step instructions be perceived in the way the .py function is written? Ranging from 1 to 5. Low score=1: The design task is bland, ambiguous and lacks specificity to become a clear step-by-step instruction on how to model the facade. High score=5: The design task expands the design concept and material categories with relevant dimensions, formal and spatial implications, facade system and building components, clearly translating them into specific and concise modeling steps. BE STRICT WITH THE SCORES, THE GOAL IS TO IDENTIFY WEAKNESSES AND IMPROVE THEM.",
+        description="How well does the rendered geometry represent the attributes of the design concept? Ranging from 1 to 5. Low score=1: The rendered image could be any geometry and does not align at all with the design concept. High score=5: By observing the image, one can easily identify the key formal, spatial and geometrical attributes expressed in the design concept",
     )
     explanation: str | None = Field(
         default=None,
-        description="Explain your reasoning for the scores given above. Provide specific observations (referencing the .py function if necessary) that support your evaluation of the design task quality.",
-    )
-    
-class FacadePotential(BaseModel):
-    scores: int | None = Field(
-        default=None,
-        description="Does the image represent a potential facade? How well do the image and .py function align with the design task, material categories and design concept? Ranging from 1 to 5. Low score=1: The .py function and rendered image could be any geometry and do not represent at all the concept, material or categories in the design task. High score=5: By observing the image, one can easily identify a facade that follows the design concept, material categories, proportions, implications, components, operations and modelling steps suggested in the design task. BE STRICT WITH THE SCORES, THE GOAL IS TO IDENTIFY WEAKNESSES AND IMPROVE THEM.",
-    )
-    explanation: str | None = Field(
-        default=None,
-        description="Explain your reasoning for the scores given above. Provide specific observations from the image and/or the .py function that support your evaluation of the facade potential and alignment with the task, material and concept.",
+        description="Explain your reasoning for the scores given above, in 2-3 concise sentences. Provide specific observations that support your evaluation.",
     )
 
+# 03 -- OPTIONAL. DEFINE A CLASS TO SUGGEST IMPROVEMENTS BASED ON THE EVALUATIONS.
+#__________________________________________________________________________________________
 class ImprovementProposal(BaseModel):
-    reflection: str | None = Field(
-        default=None,
-        description="Your task is to reflect on the results of the previous categories and assess what DOES work correctly now, and what NEEDS TO BE IMPROVED. State this reflection in a brief 1-3 sentences per category (design concept/material chart/design task/3DModel)",
-    )
     improvement_target: ImprovementTarget | None = Field(
         default=None,
-        description="Based on your reflection, which of the following 3 aspects would you prioritize for improvement? Choose only one: design_driver, design_task, design_modeling.",
+        description="Based on your evaluations, which of the following 3 aspects would you prioritize for improvement? Choose only one: design concept, modeling function or overall geometry.",
     )
     improvement_proposal: str | None = Field(
         default=None,
-        description="What changes would you suggest to the selected improvement_target to make the design more alligned with the intent, task and materiality? State your improvement proposal briefly with concise language and 3 specific bulletpoints or actions to take.",
+        description="State a brief improvement proposal for the selected target, with concise language and 3 specific bulletpoints or actions to take.",
     )
 
+# 04 -- BUILD THE EVALUATION AGENT.
+#__________________________________________________________________________________________
 class EvaluationAgent:
     def __init__(self, model_name=MODEL_NAME_DEFAULT, logfire_debug=True):
         # Initialize logfire for logging
@@ -125,23 +116,18 @@ class EvaluationAgent:
         # initialize the agent with the model and specify the output type
         self.eval_concept = Agent(
             model=model,
-            instructions=load_prompt("evaluation_driver_system", ext="md"),
+            instructions=load_prompt("evaluation_metrics_system", ext="md"),
             output_type=ConceptStrength,  # The agent will return a string of code
-        )
-        self.eval_material = Agent(
-            model=model,
-            instructions=load_prompt("evaluation_material_system", ext="md"),
-            output_type=MaterialCoherence,  # The agent will return a string of code
-        )
-        self.eval_task = Agent(
-            model=model,
-            instructions=load_prompt("evaluation_task_system", ext="md"),
-            output_type=DesignTaskQuality,  # The agent will return a string of code
         )
         self.eval_modeling = Agent(
             model=model,
-            instructions=load_prompt("evaluation_modeling_system", ext="md"),
-            output_type=FacadePotential,  # The agent will return a string of code
+            instructions=load_prompt("evaluation_metrics_system", ext="md"),
+            output_type=ModelingStrategy,  # The agent will return a string of code
+        )
+        self.eval_geometry = Agent(
+            model=model,
+            instructions=load_prompt("evaluation_metrics_system", ext="md"),
+            output_type=GeometricAlignment,  # The agent will return a string of code
         )
         self.eval_suggestion = Agent(
             model=model,
@@ -149,7 +135,9 @@ class EvaluationAgent:
             output_type=ImprovementProposal,  # The agent will return a string of code
         )
 
-  
+# 05 -- DEFINE HOW TO RUN THE EVALUATIONS AND WHAT DATA TO LOOK AT IN EACH STEP.  
+#__________________________________________________________________________________________
+
     def evaluate_design(self, modeling_context: ModelingContext) -> dict | None:
         # try:
             # Encode reference images
@@ -177,26 +165,21 @@ class EvaluationAgent:
 
             concept_score = self.eval_concept.run_sync(
                 user_prompt=[
-                    "Evaluate the alignment of the images with the design concept, and the overall strength of the concept.",
+                    "Evaluate the overall strength of the concept.",
                     *ref_img_data
-                ]
-            ).output
-
-            material_score = self.eval_material.run_sync(
-                user_prompt=[
-                    f"Evaluate the coherence of the material strategies {modeling_context.material_driver} internally, with the given key traits {modeling_context.design_driver} and with the design strategy {modeling_context.design_strategy}. "
-                ]
-            ).output
-
-            task_score = self.eval_task.run_sync(
-                user_prompt=[
-                    f"Evaluate the quality of the design task {modeling_context.design_task} with the given design concept {modeling_context.material_driver} and its translation to the {modeling_context.gh_pyhon_script}. "
                 ]
             ).output
 
             modeling_score = self.eval_modeling.run_sync(
                 user_prompt=[
-                    f"Evaluate the alignment of the generated images and the gh python script that generates the model with the design task {modeling_context.design_task} , the given concept {modeling_context.material_driver} and the design strategy {modeling_context.design_strategy}. ",
+                    f"Evaluate the alignment of the gh python script {modeling_context.gh_pyhon_script} that generates the model with the given concept {modeling_context.design_concept} and the rendered object. ", 
+                    *render_data,
+                ]
+            ).output
+    
+            geometric_score = self.eval_geometry.run_sync(
+                user_prompt=[
+                    f"Evaluate the alignment of the geometry rendered in the image with the given design concept {modeling_context.design_concept}.",
                     f"code: {modeling_context.gh_pyhon_script}", 
                     *render_data,
                 ]
@@ -205,29 +188,28 @@ class EvaluationAgent:
             # Extract scores as floats
             scores = [
                 float(concept_score.scores) if concept_score.scores is not None else None,
-                float(material_score.scores) if material_score.scores is not None else None,
-                float(task_score.scores) if task_score.scores is not None else None,
                 float(modeling_score.scores) if modeling_score.scores is not None else None,
+                float(geometric_score.scores) if geometric_score.scores is not None else None,
             ]
             # Filter out None values
             valid_scores = [s for s in scores if s is not None]
             average_score = round(sum(valid_scores) / len(valid_scores), 2) if valid_scores else None
 
+            # Generate improvement proposal
             improvement = self.eval_suggestion.run_sync(
                 user_prompt=[
-                    "Based on the previous evaluations and scores, choose the weakest segment in the pipeline OR the segment whose improvement would have the most significant impact, and provide a reflection and improvement proposal",
-                    f"Design Concept Evaluation: {concept_score}",
-                    f"Material Strategy Evaluation: {material_score}",
-                    f"Design Task Evaluation: {task_score}",
-                    f"Modeling Evaluation: {modeling_score}"
+                    "Based on the previous evaluations and scores, provide an improvement proposal focusing on the weakest aspect of these three:",
+                    f"Design Concept: {concept_score}",
+                    f"Modeling Strategy: {modeling_score}",
+                    f"Geometric Alignment: {geometric_score}",
                 ]
             ).output
 
+            # Return all scores and improvement proposal as a dictionary
             return dict(
-                design_concept_strength=concept_score.model_dump(),
-                material_strategy_coherence=material_score.model_dump(),
-                design_task_quality=task_score.model_dump(),
-                facade_potential=modeling_score.model_dump(),
+                concept_strength=concept_score.model_dump(),
+                modeling_strategy=modeling_score.model_dump(),
+                geometric_alignment=geometric_score.model_dump(),
                 average_score=average_score,
                 improvement_proposal=improvement.model_dump()
             )
