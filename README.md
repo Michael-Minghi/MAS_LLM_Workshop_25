@@ -30,4 +30,10 @@ OPENAI_API_KEY=[Your API KEY]
 LOGFIRE_TOKEN=[Your TOKEN]
 ```
 
+### Install Blender
+[Blender 4.4](https://www.blender.org/download/releases/4-4/) 
+
 ### Run the example
+```sh
+uv run env_test.py
+```

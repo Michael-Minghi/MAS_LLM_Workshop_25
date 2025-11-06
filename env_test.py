@@ -26,6 +26,6 @@ if __name__ == "__main__":
             output_type=str,
         )
 
-        print (agent.run_sync('Tell me about Digital building technology in ETH Zurich.').output)
+        print ("\n" + agent.run_sync('Tell me about Digital building technology group').output)
     except Exception as e:
         print (f"Failed to initialize OpenAI model: {e}")
