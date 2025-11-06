@@ -158,21 +158,23 @@ class ParametricModelingAgent:
             script_log = data["script_log"]
 
             # log progress
-            log_progress(attempt=attempt,  log=script_log, code=code_for_gh) 
+            log_progress(attempt=attempt, log=script_log, code=code_for_gh, output_dir=output_dir) 
 
             # Check if response indicates success
             if script_log.strip().endswith("success"):
                 print("Success! Code executed successfully.")
                 
+                obj_file_paths = data["obj_file_paths"]
                 obj_output_paths = []
 
                 # copy the obj file to the output directory
-                for i, obj_file_path in enumerate(data["obj_file_paths"]):
+                for i, obj_file_path in enumerate(obj_file_paths):
                     padded_index = get_obj_padding(output_dir)
 
                     obj_file_output_path = os.path.join(
                         output_dir, f"{padded_index}_3d_model.obj"
                     )
+
                     obj_output_paths.append(obj_file_output_path)
 
                     if os.name == "posix":
@@ -180,7 +182,7 @@ class ParametricModelingAgent:
                     else:
                         os.system(f"move {obj_file_path} {obj_file_output_path}")
                     print(
-                        f"Obj file {i+1}/{len(data["obj_file_paths"])} saved as {obj_file_output_path}"
+                        f"Obj file {i+1}/{len(obj_file_paths)} saved as {obj_file_output_path}"
                     )
                 
                 # Render the generated geometries
@@ -204,6 +206,8 @@ class ParametricModelingAgent:
                     code_for_gh,
                     code_summary
                 )
+
+                break # Exit the loop on success
 
             else:
                 # Update the error message for the next attempt

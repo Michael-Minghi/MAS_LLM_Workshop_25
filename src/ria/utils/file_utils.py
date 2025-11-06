@@ -545,7 +545,6 @@ def load_text(*fpaths, by_lines=False):
         else:
             return fp.read()
 
-
 def load_text_lines(*fpaths):
     return load_text(*fpaths, by_lines=True)
 

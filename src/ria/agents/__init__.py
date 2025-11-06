@@ -1,4 +1,4 @@
-from .modeling_agent import ParametricModelingAgent, get_design_folder_name
+from .modeling_agent import ParametricModelingAgent
 from .evaluation import EvaluationAgent
 
 
