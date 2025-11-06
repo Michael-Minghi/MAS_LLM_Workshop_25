@@ -1,10 +1,8 @@
-import bpy
+
 import os, faulthandler
 import random
-
 from rich import print as rprint
 
-from ria.agents import ReflectionAgent, ModeilingContext
 from ria.agents.modeling_agent import get_design_folder_name
 from ria.utils import load_metaphors_data, load_skill_libs
 

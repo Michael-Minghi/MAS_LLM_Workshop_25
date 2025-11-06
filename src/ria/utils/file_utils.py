@@ -57,7 +57,7 @@ def utf_open(fname, mode):
 def is_sequence(obj):
     """
     Returns:
-      True if the sequence is a collections.Sequence and not a string.
+        True if the sequence is a collections.Sequence and not a string.
     """
     return isinstance(obj, collections.abc.Sequence) and not isinstance(obj, str)
 
@@ -81,7 +81,7 @@ def f_not_empty(*fpaths):
     """
     Returns:
         True if and only if the file exists and file size > 0
-          if fpath is a dir, if and only if dir exists and has at least 1 file
+        if fpath is a dir, if and only if dir exists and has at least 1 file
     """
     fpath = f_join(*fpaths)
     if not os.path.exists(fpath):
@@ -513,19 +513,19 @@ def timestamp_file_name(fname):
     return insert_before_ext(fname, timestr)
 
 
-def get_file_lock(*fpath, timeout: int = 15, logging_level="critical"):
-    """
-    NFS-safe filesystem-backed lock. `pip install flufl.lock`
-    https://flufllock.readthedocs.io/en/stable/apiref.html
+# def get_file_lock(*fpath, timeout: int = 15, logging_level="critical"):
+#     """
+#     NFS-safe filesystem-backed lock. `pip install flufl.lock`
+#     https://flufllock.readthedocs.io/en/stable/apiref.html
 
-    Args:
-        fpath: should be a path on NFS so that every process can see it
-        timeout: seconds
-    """
-    from flufl.lock import Lock
+#     Args:
+#         fpath: should be a path on NFS so that every process can see it
+#         timeout: seconds
+#     """
+#     from flufl.lock import Lock
 
-    logging.getLogger("flufl.lock").setLevel(logging_level.upper())
-    return Lock(f_join(*fpath), lifetime=timeout)
+#     logging.getLogger("flufl.lock").setLevel(logging_level.upper())
+#     return Lock(f_join(*fpath), lifetime=timeout)
 
 
 def load_pickle(*fpaths):
@@ -582,206 +582,30 @@ def json_dumps(data, **kwargs):
     """
     return json.dumps(data, **kwargs)
 
-
-def load_metaphors_data(folder):
-    all_metaphors_dict = {}
-    for file in sorted(os.listdir(folder)):
-        if file.endswith(".json"):
-            data = json_load(f"{folder}/{file}")
-            if "timestamp" in data:
-                del data["timestamp"]  # Remove the 'timestamp' key if it exists
-            # all_ideas.append(data)
-            all_metaphors_dict[file] = data
-    return all_metaphors_dict
-
-""" def load_skill_libs(dir):
-    all_skill_dict = {}
-    for folder in os.listdir(dir):
-        f_dir = os.path.join(dir,folder)
-        # print (f_dir)
-        if not os.path.isdir(f_dir):
-            continue
-        all_skill_dict[folder+".json"] = {}
-        for sub_folder in os.listdir(f_dir):
-            # print (sub_folder)
-            sf_dir = os.path.join(f_dir, sub_folder)
-            # print (sf_dir)
-            if not os.path.isdir(sf_dir):
-                continue
-            _dict = dict(function_code=None, code_summary=None)
-            
-            for file in os.listdir(sf_dir):
-                if file.endswith('.py'):
-                    # _dict['function_code'] = load_text(os.path.join(sf_dir, file))
-                    content = extract_variable_from_file(os.path.join(sf_dir, file), 'function_code')
-                    _dict['function_code'] = content
-                elif file.endswith('.md'):
-                    _dict['code_summary'] = load_text(os.path.join(sf_dir, file))
-            if _dict['function_code'] != None and _dict['code_summary'] != None:
-                index = len(all_skill_dict[folder+".json"].keys())+1
-                all_skill_dict[folder+".json"][f'example_{index}'] = _dict
-    return all_skill_dict """
-
-
-def load_skill_libs(dir):
-    all_skill_dict = {}
-    for folder in os.listdir(dir):
-        f_dir = os.path.join(dir, folder)
-        if not os.path.isdir(f_dir):
-            continue
-        all_skill_dict[folder + ".json"] = {}
-        for sub_folder in os.listdir(f_dir):
-            sf_dir = os.path.join(f_dir, sub_folder)
-            if not os.path.isdir(sf_dir):
-                continue
-            _dict = dict(function_code=None, code_summary=None, evaluation_improvements=[])
-            eval_file = None
-
-            for file in os.listdir(sf_dir):
-                if file.endswith('.py'):
-                    content = extract_variable_from_file(os.path.join(sf_dir, file), 'function_code')
-                    _dict['function_code'] = content['function_code']
-                elif file.endswith('.md'):
-                    _dict['code_summary'] = load_text(os.path.join(sf_dir, file))
-                elif file.endswith('.csv'):
-                    eval_file = os.path.join(sf_dir, file)
-
-            if eval_file:
-                df = pd.read_csv(eval_file, encoding='utf-8')
-                col = df['improvement_proposal'].dropna()
-                for i, c in enumerate(col):
-                    call_info = content.get('calls', [])
-                    if i < len(call_info):
-                        _dict['evaluation_improvements'].append(str(call_info[i]) + ":" + str(c))
-                    else:
-                        _dict['evaluation_improvements'].append(str(c))
-                    # with open(csv_path, newline='', encoding='utf-8') as csvfile:
-                    #     reader = csv.DictReader(csvfile)
-                    #     for i,row in enumerate(reader):
-                    #         if 'improvement_proposal' in row:
-                    #             improvements.append(row['improvement_proposal'])
-                    #     _dict['evaluation_improvements'].extend(improvements)
-            if _dict['function_code'] != None and _dict['code_summary'] != None:
-                index = len(all_skill_dict[folder + ".json"].keys()) + 1
-                all_skill_dict[folder + ".json"][f'example_{index}'] = _dict
-    return all_skill_dict
-
-
-def extract_variable_from_file(file_path, var_name):
-    with open(file_path, 'r', encoding='utf-8', errors='ignore') as file:
-        content = file.read()
-
-    # Parse the content into an abstract syntax tree (AST)
-    tree = ast.parse(content)
-    class CodeVisitor(ast.NodeVisitor):
-        def __init__(self, var_name):
-            self.function_code = None
-            self.var_name = var_name
-
-        def visit_Assign(self, node):
-            # Extract function_code string
-            for target in node.targets:
-                if isinstance(target, ast.Name) and target.id == var_name:
-                    if isinstance(node.value, ast.Constant):
-                        self.function_code = node.value.value
-                    elif isinstance(node.value, ast.Str):
-                        self.function_code = node.value.s
-            self.generic_visit(node)
-
-    class ParamVisitor(ast.NodeVisitor):
-        def __init__(self, function_name):
-            self.param_order = None
-            self.function_name = function_name
-
-        def visit_FunctionDef(self, node):
-            # Capture parameter order for the defined function
-            if node.name == self.function_name:
-                self.param_order = [arg.arg for arg in node.args.args]
-            self.generic_visit(node)
-
-    class CallVisitor(ast.NodeVisitor):
-        def __init__(self, function_name, params):
-            self.function_name = function_name
-            self.param_order = params
-            self.calls = []
-
-        def visit_Call(self, node):
-            # Capture calls
-            if isinstance(node.func, ast.Name) and node.func.id == self.function_name:
-                args_dict = {}
-
-                # Handle positional arguments
-                for i, arg in enumerate(node.args):
-                    if i < len(self.param_order):
-                        try:
-                            args_dict[self.param_order[i]] = ast.literal_eval(arg)
-                        except Exception:
-                            args_dict[self.param_order[i]] = "<non-literal>"
-
-                # Handle keyword arguments
-                for kw in node.keywords:
-                    try:
-                        args_dict[kw.arg] = ast.literal_eval(kw.value)
-                    except Exception:
-                        args_dict[kw.arg] = "<non-literal>"
-
-                self.calls.append(args_dict)
-            self.generic_visit(node)
+def log_progress(attempt: int, log: str, code: str, output_dir: str) -> None:
+    """
+    Check if progress_log.json exists in output_dir. if true append latest log entry, else create new progress_log.json. 
     
-    # Get the function code
-    code_visitor = CodeVisitor(var_name=var_name)
-    code_visitor.visit(tree)
-    # Get parameter order
-    code_tree= ast.parse(code_visitor.function_code)
-    param_visitor = ParamVisitor(function_name=os.path.basename(file_path).split('.')[0])
-    param_visitor.visit(code_tree)
-    # Get function calls
-    call_visitor = CallVisitor(function_name=os.path.basename(file_path).split('.')[0],params=param_visitor.param_order)
-    call_visitor.visit(tree)
+    Args:
+        attempt: current attempt number
+        log: script log from GH
+        code: code sent to GH
+        output_dir: directory where progress_log.json is stored
+    """
+    progress_log = []
+    
+    # Check if the progress log file exists, if do add to it
+    if os.path.exists(os.path.join(output_dir, "progress_log.json")):
+        with open(os.path.join(output_dir, "progress_log.json"), "r") as f:
+            progress_log = json.load(f)
 
-    return dict(
-        function_code=code_visitor.function_code,
-        calls=call_visitor.calls
+    progress_log.append(
+        {"attempt": attempt, "log": log, "code": code}
     )
 
-# aliases to be consistent with other load_* and dump_*
-pickle_load = load_pickle
-pickle_dump = dump_pickle
-text_load = load_text
-read_text = load_text
-read_text_lines = load_text_lines
-write_text = dump_text
-write_text_lines = dump_text_lines
-text_dump = dump_text
+    json_dump(
+        progress_log,
+        os.path.join(output_dir, "progress_log.json"),
+        indent=2
+    )
 
-
-# Function to extract used material words from existing modeling contexts
-def get_used_material_words(design_driver, modeling_contexts_folder):
-    used_words = set()
-    for file in os.listdir(modeling_contexts_folder):
-        if file.endswith('.json'):
-            context = json_load(os.path.join(modeling_contexts_folder, file))
-            if context.get('design_driver') == design_driver and 'material_driver' in context:
-                md = context['material_driver']
-                if md is None:
-                    continue  # Skip if material_driver is None
-                if isinstance(md, list):
-                    for entry in md:
-                        if entry is None:
-                            continue
-                        used_words.update([
-                            entry.get('form_making', ''),
-                            entry.get('construction_technique', ''),
-                            entry.get('format', ''),
-                            entry.get('spatial_strategy', '')
-                        ])
-                else:
-                    used_words.update([
-                        md.get('form_making', ''),
-                        md.get('construction_technique', ''),
-                        md.get('format', ''),
-                        md.get('spatial_strategy', '')
-                    ])
-    # Remove empty strings
-    used_words = {w for w in used_words if w}
-    return used_words
