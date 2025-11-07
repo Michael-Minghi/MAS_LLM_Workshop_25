@@ -5,7 +5,7 @@ from ria.instructions import load_instruction
 from ria.utils import load_images, json_load, json_dump, load_text
 import os
 from enum import Enum
-#import questionary
+import questionary
 
 # import from pydantic ai
 from pydantic_ai import Agent, RunContext
