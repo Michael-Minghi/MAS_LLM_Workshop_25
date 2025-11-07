@@ -21,8 +21,8 @@ from datetime import datetime
 from socket import gethostname
 import logging
 import pandas as pd
-
-
+from pydantic_ai import BinaryContent
+import pathlib
 
 f_ext = os.path.splitext
 
@@ -608,3 +608,18 @@ def log_progress(attempt: int, log: str, code: str, output_dir: str) -> None:
         indent=2
     )
 
+def load_images(image_paths: list[str]) -> list[BinaryContent]:
+    """
+    Load images from file paths as bytes. supported formats: jpeg, png, gif, webp. Other formats will be skipped.
+
+    Args:
+        image_paths: list of image file paths
+    """
+    contents = []
+    for img in image_paths:
+        suffix = pathlib.Path(img).suffix
+        if suffix in ['.jpeg', '.png', '.gif', '.webp']:
+            with open(img, "rb") as img_file:
+                img_data = img_file.read()
+                contents.append(BinaryContent(data=img_data, media_type=f"image/{suffix.lstrip('.')}"))
+    return contents

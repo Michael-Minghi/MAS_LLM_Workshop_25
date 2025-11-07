@@ -91,7 +91,7 @@ def save_script_to_file(path, gh_code, summary):
 
     # content = concat_code(gh_code, summary, idea_file)
     summary_string = f'""" Summary:\n{summary}"""\n\n'
-    with open(filename, "w") as f:
+    with open(filename, "w", encoding='utf-8', errors="ignore") as f:
         f.write(summary_string)
         f.write(gh_code)
         print(f"Python script saved as {filename}")

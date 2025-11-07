@@ -182,17 +182,17 @@ def render_objs(
             src_dir = os.path.dirname(paths[i])
 
             # Build filename
-            base_parts = os.path.basename(src_dir).split("_")
-            obj_id = int(os.path.basename(paths[i]).split("_")[0])
-            base_parts.insert(4, f"{obj_id + 1:02}")
-            final_basename = "_".join(base_parts)
+            # base_parts = os.path.basename(src_dir).split("_")
+            # obj_id = int(os.path.basename(paths[i]).split("_")[0])
+            # base_parts.insert(4, f"{obj_id + 1:02}")
+            # final_basename = "_".join(base_parts)
 
             # STILL + ANIMATION Filenames
             y_up_suffix = "_Y-up" if y_up else ""
-            final_still_path = os.path.join(src_dir, f"{final_basename}{file_suffix}{y_up_suffix}.png")
-            temp_still_path = os.path.join(src_dir, f"{final_basename}{file_suffix}{y_up_suffix}_temp_still.png")
-            final_anim_path = os.path.join(src_dir, f"{final_basename}{file_suffix}{y_up_suffix}.mp4")
-            temp_anim_path = os.path.join(src_dir, f"{final_basename}{file_suffix}{y_up_suffix}_temp") # + ".mp4")
+            final_still_path = os.path.join(src_dir, f"{str(i).zfill(2)}{file_suffix}{y_up_suffix}_render.png")
+            temp_still_path = os.path.join(src_dir, f"{str(i).zfill(2)}{file_suffix}{y_up_suffix}_render.png")
+            final_anim_path = os.path.join(src_dir, f"{str(i).zfill(2)}{file_suffix}{y_up_suffix}.mp4")
+            temp_anim_path = os.path.join(src_dir, f"{str(i).zfill(2)}{file_suffix}{y_up_suffix}_temp") # + ".mp4")
 
             # Unhide this object
             obj.hide_render = False

@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 # ria imports
 from ria.instructions import load_instruction
-from ria.utils import render_objs, RenderStyle, clean_code_string, _prepare_code_for_gh, _send_code_to_grasshopper, save_script_to_file, get_obj_padding, log_progress
+from ria.utils import render_objs, RenderStyle, clean_code_string, _prepare_code_for_gh, _send_code_to_grasshopper, save_script_to_file, get_obj_padding, log_progress, load_images, json_dump
 load_dotenv(override=True)
 
 import logfire
@@ -102,11 +102,7 @@ class ParametricModelingAgent:
         generated_gh_code = None
 
         # read reference images
-        images = []
-        for img_path in reference_images:
-            with open(img_path, "rb") as img_file:
-                img_data = img_file.read()
-                images.append(BinaryContent(data=img_data, media_type="image/png"))
+        images = load_images(reference_images)
 
         for attempt in range(number_of_attempts):
             if attempt == 0:
@@ -207,7 +203,13 @@ class ParametricModelingAgent:
                     code_summary
                 )
 
-                break # Exit the loop on success
+                # Save user task and reference images
+                json_dump(
+                    {'task': user_task, 'reference_images': reference_images},
+                    os.path.join(output_dir, "design_driver.json"),
+                )
+
+                return # Exit the loop on success
 
             else:
                 # Update the error message for the next attempt

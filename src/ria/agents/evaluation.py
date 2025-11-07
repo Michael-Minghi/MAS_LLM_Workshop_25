@@ -1,20 +1,20 @@
 import base64
 import json
 from dotenv import load_dotenv
-from ria.instructions import load_prompt
-from ria.utils import ModelingContext
+from ria.instructions import load_instruction
+from ria.utils import load_images, json_load, json_dump, load_text
 import os
-from typing import Annotated
 from enum import Enum
+import questionary
 
 # import from pydantic ai
-from pydantic_ai import Agent, BinaryContent
+from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 import logfire
 
 # import from pydantic
-from pydantic import BaseModel, Field, ValidationError, AfterValidator
+from pydantic import BaseModel, Field, ValidationError
 
 load_dotenv(override=True)
 
@@ -22,33 +22,17 @@ load_dotenv(override=True)
 #__________________________________________________________________________________________
 
 MODEL_NAME_DEFAULT = "gpt-5"
-INPUT_IMAGE_COUNT = 5
 
-def get_simple_schema(pydantic_model):
-    schema = {k: v for k, v in pydantic_model.schema().items()}
-    keys_to_remove = ["title", "additionalProperties", "type", "default"]
-    reduced_schema = remove_dict_key_recursive(schema, keys_to_remove=keys_to_remove)
-    schema_str = json.dumps(reduced_schema)
-    return schema_str
+# INPUT_IMAGE_COUNT = 5
 
-def remove_dict_key_recursive(d, keys_to_remove=[]):
-    if isinstance(d, dict):
-        for key in keys_to_remove:
-            d.pop(key, None)
-        for key in list(d.keys()):
-            remove_dict_key_recursive(d[key], keys_to_remove=keys_to_remove)
-    elif isinstance(d, list):
-        for item in d:
-            remove_dict_key_recursive(item, keys_to_remove=keys_to_remove)
-
-def check_scores(scores: list[int] | None):
-    if scores:
-        if len(scores) != INPUT_IMAGE_COUNT:
-            raise ValidationError(f"Scores must be a list of {INPUT_IMAGE_COUNT} integers.")
-        for v in scores:
-            if v < 1 or v > 5:
-                raise ValueError("Score must be between 1 and 5")
-    return scores
+# def check_scores(scores: list[int] | None):
+#     if scores:
+#         if len(scores) != INPUT_IMAGE_COUNT:
+#             raise ValidationError(f"Scores must be a list of {INPUT_IMAGE_COUNT} integers.")
+#         for v in scores:
+#             if v < 1 or v > 5:
+#                 raise ValueError("Score must be between 1 and 5")
+#     return scores
 
 # 02 -- STATE ONE CLASS PER EACH METRIC YOU WANT TO EVALUATE. HERE IS A SAMPLE:
 #__________________________________________________________________________________________
@@ -67,6 +51,7 @@ class ConceptStrength(BaseModel):
         default=None,
         description="Explain your reasoning for the scores given above, in 2-3 concise sentences. Provide specific observations that support your evaluation.",
     )
+
 class ModelingStrategy(BaseModel):
     scores: int | None = Field(
         default=None,
@@ -76,6 +61,7 @@ class ModelingStrategy(BaseModel):
         default=None,
         description="Explain your reasoning for the scores given above, in 2-3 concise sentences. Provide specific observations that support your evaluation.",
     )
+
 class GeometricAlignment(BaseModel):
     scores: int | None = Field(
         default=None,
@@ -113,108 +99,101 @@ class EvaluationAgent:
             provider=OpenAIProvider(api_key=os.getenv("OPENAI_API_KEY"))
             )
 
-        # initialize the agent with the model and specify the output type
-        self.eval_concept = Agent(
-            model=model,
-            instructions=load_prompt("evaluation_metrics_system", ext="md"),
-            output_type=ConceptStrength,  # The agent will return a string of code
-        )
-        self.eval_modeling = Agent(
-            model=model,
-            instructions=load_prompt("evaluation_metrics_system", ext="md"),
-            output_type=ModelingStrategy,  # The agent will return a string of code
-        )
-        self.eval_geometry = Agent(
-            model=model,
-            instructions=load_prompt("evaluation_metrics_system", ext="md"),
-            output_type=GeometricAlignment,  # The agent will return a string of code
-        )
-        self.eval_suggestion = Agent(
-            model=model,
-            instructions=load_prompt("evaluation_improvement_system", ext="md"),
-            output_type=ImprovementProposal,  # The agent will return a string of code
-        )
+        self.agent = Agent(model=model, deps_type=str)
+
+        @self.agent.instructions
+        def concept_instructions(ctx: RunContext[str]) -> str:
+            prompt = load_instruction(ctx.deps, ext="md")
+            return prompt
 
 # 05 -- DEFINE HOW TO RUN THE EVALUATIONS AND WHAT DATA TO LOOK AT IN EACH STEP.  
 #__________________________________________________________________________________________
+    def evaluate_design(self, path: str) -> None:
+        print (f"validating files integrity in {path}...")
 
-    def evaluate_design(self, modeling_context: ModelingContext) -> dict | None:
-        # try:
-            # Encode reference images
-            ref_img_data = []
-            with open(modeling_context.image_path, "rb") as image_file:
-                image_data = image_file.read()
-                ref_img_data.append(
-                    BinaryContent(
-                        data=image_data,
-                        media_type="image/png"
-                    )
-                )
-            
-            # Encode render images
-            render_data = []
-            for file in modeling_context.render_images:
-                with open(file, "rb") as image_file:
-                    image_data = image_file.read()
-                    render_data.append(
-                        BinaryContent(
-                            data=image_data,
-                            media_type="image/png"
-                        )
-                    )
+        # load design driver
+        file = os.path.join(path, "design_driver.json")
+        if not os.path.exists(file):
+            raise FileNotFoundError(f"design_driver.json not found")
+        design_drvier = json_load(file)
 
-            concept_score = self.eval_concept.run_sync(
-                user_prompt=[
-                    "Evaluate the overall strength of the concept.",
-                    *ref_img_data
-                ]
-            ).output
+        # load user task
+        design_concept = design_drvier.get("task")
 
-            modeling_score = self.eval_modeling.run_sync(
-                user_prompt=[
-                    f"Evaluate the alignment of the gh python script {modeling_context.gh_pyhon_script} that generates the model with the given concept {modeling_context.design_concept} and the rendered object. ", 
-                    *render_data,
-                ]
-            ).output
-    
-            geometric_score = self.eval_geometry.run_sync(
-                user_prompt=[
-                    f"Evaluate the alignment of the geometry rendered in the image with the given design concept {modeling_context.design_concept}.",
-                    f"code: {modeling_context.gh_pyhon_script}", 
-                    *render_data,
-                ]
-            ).output
+        # load reference images
+        ref_img_data = load_images(design_drvier.get("reference_images"))
+        
+        # load render images
+        render_data = load_images([os.path.join(path, f) for f in os.listdir(path) if f.endswith(('.png', '.jpeg', '.gif', '.webp'))])
 
-            # Extract scores as floats
-            scores = [
-                float(concept_score.scores) if concept_score.scores is not None else None,
-                float(modeling_score.scores) if modeling_score.scores is not None else None,
-                float(geometric_score.scores) if geometric_score.scores is not None else None,
-            ]
-            # Filter out None values
-            valid_scores = [s for s in scores if s is not None]
-            average_score = round(sum(valid_scores) / len(valid_scores), 2) if valid_scores else None
+        # load generated script 
+        file = os.path.join(path, "gh_function.py")
+        if not os.path.exists(file):
+            raise FileNotFoundError(f"gh_function.py not found")
+        gh_pyhon_script = load_text(file)
+        
+        print ("files validated. running evaluation...")
 
-            # Generate improvement proposal
-            improvement = self.eval_suggestion.run_sync(
-                user_prompt=[
-                    "Based on the previous evaluations and scores, provide an improvement proposal focusing on the weakest aspect of these three:",
-                    f"Design Concept: {concept_score}",
-                    f"Modeling Strategy: {modeling_score}",
-                    f"Geometric Alignment: {geometric_score}",
-                ]
-            ).output
+        concept_score = self.agent.run_sync(
+            user_prompt=[
+                "Evaluate the overall strength of the concept.",
+                *ref_img_data
+            ],
+            deps='evaluation_metrics_system',
+            output_type=ConceptStrength
+        ).output
 
-            # Return all scores and improvement proposal as a dictionary
-            return dict(
+        modeling_score = self.agent.run_sync(
+            user_prompt=[
+                f"Evaluate the alignment of the gh python script {gh_pyhon_script} that generates the model with the given concept {design_concept} and the rendered object. ", 
+                *render_data,
+            ],
+            deps='evaluation_metrics_system',
+            output_type=ModelingStrategy
+        ).output
+
+        geometric_score = self.agent.run_sync(
+            user_prompt=[
+                f"Evaluate the alignment of the geometry rendered in the image with the given design concept {design_concept}.",
+                f"code: {gh_pyhon_script}", 
+                *render_data,
+            ],
+            deps='evaluation_metrics_system',
+            output_type=GeometricAlignment
+        ).output
+
+        # Extract scores as floats
+        scores = [
+            float(concept_score.scores) if concept_score.scores else None,
+            float(modeling_score.scores) if modeling_score.scores else None,
+            float(geometric_score.scores) if geometric_score.scores else None,
+        ]
+        # Filter out None values
+        valid_scores = [s for s in scores if s]
+        average_score = round(sum(valid_scores) / len(valid_scores), 2) if valid_scores else None
+
+        # Generate improvement proposal
+        improvement = self.agent.run_sync(
+            user_prompt=[
+                "Based on the previous evaluations and scores, provide an improvement proposal focusing on the weakest aspect of these three:",
+                f"Design Concept: {concept_score}",
+                f"Modeling Strategy: {modeling_score}",
+                f"Geometric Alignment: {geometric_score}",
+            ],
+            deps='evaluation_improvement_system',
+            output_type=ImprovementProposal
+        ).output
+
+        # Return all scores and improvement proposal as a dictionary
+        json_dump(
+            dict(
                 concept_strength=concept_score.model_dump(),
                 modeling_strategy=modeling_score.model_dump(),
                 geometric_alignment=geometric_score.model_dump(),
                 average_score=average_score,
                 improvement_proposal=improvement.model_dump()
-            )
+            ),
+            os.path.join(path, "evaluation_report.json")
+        )
 
-        # except Exception as e:
-        #     print(f"Error: {e}")
-        #     return None
-
+        print ("Evaluation completed. Report saved to evaluation_report.json")
