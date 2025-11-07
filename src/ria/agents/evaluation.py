@@ -121,8 +121,21 @@ class EvaluationAgent:
         # load user task
         design_concept = design_driver.get("task")
 
-        # load reference images
-        ref_img_data = load_images(design_driver.get("reference_images"))
+        # Get the folder path from reference_images
+        image_folder = design_driver.get("reference_images", "")
+
+        # Collect all image file paths in the folder
+        if os.path.isdir(image_folder):
+            reference_image_paths = [
+                os.path.join(image_folder, img)
+                for img in os.listdir(image_folder)
+                if img.endswith((".png", ".jpeg", ".gif", ".webp"))
+            ]
+        else:
+            reference_image_paths = []
+
+        # Load reference images
+        ref_img_data = load_images(reference_image_paths)
 
         # load render images
         render_data = load_images([os.path.join(path, f) for f in os.listdir(path) if f.endswith(('.png', '.jpeg', '.gif', '.webp'))])
@@ -137,7 +150,7 @@ class EvaluationAgent:
 
         concept_score = self.agent.run_sync(
             user_prompt=[
-                f"Evaluate the overall strength of the concept {design_concept}, using also the ref_img_data only if provided.",
+                f"Evaluate the overall strength of the concept {design_concept}, using also the only if provided.",
                 *ref_img_data
             ],
             deps='evaluation_metrics_system',
