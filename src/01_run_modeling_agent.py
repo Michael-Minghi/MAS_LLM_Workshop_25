@@ -19,8 +19,10 @@ if __name__ == "__main__":
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    task = "Generate a gridded structure of 10 cubes, scaling each cube based on its x and y position. They must pile up in the z axis"
+
+    # USER PROMPT: This is where you define the task for the modeling agent.
+    task = "Generate a vertical tower structure using cubes, based  on the reference image provided."
 
     # OPTIONAL: Add reference_images=IMAGE_FOLDER if any.
     modeling_agent = ParametricModelingAgent()
-    modeling_agent.generate_code(user_task=task, output_dir=output_dir)
+    modeling_agent.generate_code(user_task=task, output_dir=output_dir, reference_images=IMAGE_FOLDER)

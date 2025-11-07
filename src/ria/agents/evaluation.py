@@ -116,14 +116,14 @@ class EvaluationAgent:
         file = os.path.join(path, "design_driver.json")
         if not os.path.exists(file):
             raise FileNotFoundError(f"design_driver.json not found")
-        design_drvier = json_load(file)
+        design_driver = json_load(file)
 
         # load user task
-        design_concept = design_drvier.get("task")
+        design_concept = design_driver.get("task")
 
         # load reference images
-        ref_img_data = load_images(design_drvier.get("reference_images"))
-        
+        ref_img_data = load_images(design_driver.get("reference_images"))
+
         # load render images
         render_data = load_images([os.path.join(path, f) for f in os.listdir(path) if f.endswith(('.png', '.jpeg', '.gif', '.webp'))])
 
@@ -137,7 +137,7 @@ class EvaluationAgent:
 
         concept_score = self.agent.run_sync(
             user_prompt=[
-                "Evaluate the overall strength of the concept.",
+                f"Evaluate the overall strength of the concept {design_concept}, using also the ref_img_data only if provided.",
                 *ref_img_data
             ],
             deps='evaluation_metrics_system',
