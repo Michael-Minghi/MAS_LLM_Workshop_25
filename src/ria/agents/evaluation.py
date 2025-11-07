@@ -5,7 +5,7 @@ from ria.instructions import load_instruction
 from ria.utils import load_images, json_load, json_dump, load_text
 import os
 from enum import Enum
-import questionary
+#import questionary
 
 # import from pydantic ai
 from pydantic_ai import Agent, RunContext
@@ -108,6 +108,7 @@ class EvaluationAgent:
 
 # 05 -- DEFINE HOW TO RUN THE EVALUATIONS AND WHAT DATA TO LOOK AT IN EACH STEP.  
 #__________________________________________________________________________________________
+
     def evaluate_design(self, path: str) -> None:
         print (f"validating files integrity in {path}...")
 
