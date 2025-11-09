@@ -121,21 +121,8 @@ class EvaluationAgent:
         # load user task
         design_concept = design_driver.get("task")
 
-        # Get the folder path from reference_images
-        image_folder = design_driver.get("reference_images", "")
-
-        # Collect all image file paths in the folder
-        if os.path.isdir(image_folder):
-            reference_image_paths = [
-                os.path.join(image_folder, img)
-                for img in os.listdir(image_folder)
-                if img.endswith((".png", ".jpeg", ".gif", ".webp"))
-            ]
-        else:
-            reference_image_paths = []
-
-        # Load reference images
-        ref_img_data = load_images(reference_image_paths)
+         # load reference images
+        ref_img_data = load_images(design_driver.get("reference_images"))
 
         # load render images
         render_data = load_images([os.path.join(path, f) for f in os.listdir(path) if f.endswith(('.png', '.jpeg', '.gif', '.webp'))])
