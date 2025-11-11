@@ -14,7 +14,7 @@ from pydantic_ai import Agent, RunContext, BinaryContent
 from pydantic_ai.models.openai import OpenAIResponsesModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
-MODEL_NAME_DEFAULT = "gpt-5"
+MODEL_NAME_DEFAULT = "gpt-4o"
 
 class ParametricModelingAgent:
     def __init__(
