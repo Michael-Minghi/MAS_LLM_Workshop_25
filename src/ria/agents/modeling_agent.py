@@ -93,7 +93,7 @@ class ParametricModelingAgent:
         user_task: str,
         output_dir: str,
         reference_images: list[str] = [],
-        number_of_attempts: int = 8,
+        number_of_attempts: int = 10,
         number_of_example_usages: int = 3,
     )-> None: 
         # Initial setup for the first attempt

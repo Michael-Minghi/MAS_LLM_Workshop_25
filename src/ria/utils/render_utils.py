@@ -18,8 +18,8 @@ hidden_collection_name = "HIDDEN"  # Collection containing objects to be hidden
 
 def render_objs(
     paths=None,
-    resolution_x=1080,
-    resolution_y=1080,
+    resolution_x=2160,
+    resolution_y=2160,
     scale_local=True,
     animation=False,
     frames=120,

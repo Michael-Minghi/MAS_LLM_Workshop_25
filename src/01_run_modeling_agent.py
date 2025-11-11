@@ -14,7 +14,7 @@ def get_output_padding(dir):
 
 if __name__ == "__main__":
     id = get_output_padding(OUTPUT_FOLDER)
-    label = 'mp_draft'
+    label = 'mp_ass'
 
     output_dir = os.path.join(OUTPUT_FOLDER, f"{id}_{label}")
     if not os.path.exists(output_dir):
@@ -28,7 +28,9 @@ if __name__ == "__main__":
 
     print (images)    
     # USER PROMPT: This is where you define the task for the modeling agent.
-    task = "Generate a dangerous vertical architectural structure using very many small cubes, closely based on the reference image provided."
+    task = "Generate a chicken garaage."
+    
+    # improvement = "Introduce a measured twist: rotate each 4-floor stack by 2\u20133\u00b0 around a slightly off-center core, accumulating 12\u201315\u00b0 at the crown; keep floor plates orthogonal to remain buildable.\n- Carve a bold void: subtract a vertical slot 20\u201330% of the plan that shifts into a diagonal sky-bridge cut between levels ~18\u201326; glaze and light the void to reveal depth and program.\n- Stage controlled offsets: create 2\u20133 setbacks/cantilevers at ~1/3 and ~2/3 height, offsetting 8\u201312% of tower width to form sky-terraces; articulate thicker edge beams to signal structure."
 
     # OPTIONAL: Add reference_images=IMAGE_FOLDER if any.
     modeling_agent = ParametricModelingAgent()

@@ -41,6 +41,9 @@ class ImprovementTarget(str, Enum):
     DESIGN_CONCEPT = "design_concept"
     DESIGN_MODELING = "design_modeling"
     DESIGN_GEOMETRY = "design_geometry"
+    SEXINESS = "Sexiness"
+    ECSTASY = "Ecstasy"
+    SURPRISE = "Surprise"
 
 class ConceptStrength(BaseModel):
     scores: int | None = Field(
@@ -72,12 +75,42 @@ class GeometricAlignment(BaseModel):
         description="Explain your reasoning for the scores given above, in 2-3 concise sentences. Provide specific observations that support your evaluation.",
     )
 
+class Dullness_Sexiness(BaseModel):
+    scores: int | None = Field(
+        default=None,
+        description="Rate the rendered image on dullness-sexiness scale, from 1 to 5. Low score=1: The image appears plain, sterile, or visually uninviting. It lacks sensual, aesthetic, or emotional allure. High score=5: The image has a compelling, primal appeal, immediately captivating and emotionally or sensorially arousing.",
+    )
+    explanation: str | None = Field(
+        default=None,
+        description="Explain your reasoning for the scores given above, in 2-3 concise sentences. Provide specific observations that support your evaluation.",
+    )
+
+class Calmness_Ecstasy(BaseModel):
+    scores: int | None = Field(
+        default=None,
+        description="Rate the rendered image on calmness–ecstasy scale, from 1 to 5. Low score=1: The image feels tranquil, balanced, and soothing, evoking rest or stillness. High score=5: The image radiates intensity or exhilaration, visually or emotionally powerful, evoking awe or euphoria.",
+    )
+    explanation: str | None = Field(
+        default=None,
+        description="Explain your reasoning for the scores given above, in 2-3 concise sentences. Provide specific observations that support your evaluation.",
+    )
+
+class Predictability_Surprise(BaseModel):
+    scores: int | None = Field(
+        default=None,
+        description="Rate the rendered image on predictability–surprise scale, from 1 to 5. Low score=1: The image feels familiar or conventional. The composition, style, or subject matter follow expected norms. High score=5: The image defies expectation, evoking curiosity, wonder, or shock through composition, concept, or execution.",
+    )
+    explanation: str | None = Field(
+        default=None,
+        description="Explain your reasoning for the scores given above, in 2-3 concise sentences. Provide specific observations that support your evaluation.",
+    )
+
 # 03 -- OPTIONAL. DEFINE A CLASS TO SUGGEST IMPROVEMENTS BASED ON THE EVALUATIONS.
 #__________________________________________________________________________________________
 class ImprovementProposal(BaseModel):
     improvement_target: ImprovementTarget | None = Field(
         default=None,
-        description="Based on your evaluations, which of the following 3 aspects would you prioritize for improvement? Choose only one: design concept, modeling function or overall geometry.",
+        description="Based on your evaluations, how can the image be improved to achieve higher scores on the 3 scales: Dullness-Sexiness, Calmness-Ecstasy, and Predictability-Surprise.",
     )
     improvement_proposal: str | None = Field(
         default=None,
@@ -163,11 +196,41 @@ class EvaluationAgent:
             output_type=GeometricAlignment
         ).output
 
+        sexiness_score = self.agent.run_sync(
+            user_prompt=[
+                f"Evaluate the level of sexiness of the rendered geometry.", 
+                *render_data,
+            ],
+            deps='evaluation_metrics_system',
+            output_type=Dullness_Sexiness
+        ).output
+
+        ecstasy_score = self.agent.run_sync(
+            user_prompt=[
+                f"Evaluate the level of ecstasy of the rendered geometry.", 
+                *render_data,
+            ],
+            deps='evaluation_metrics_system',
+            output_type=Calmness_Ecstasy
+        ).output
+
+        surprise_score = self.agent.run_sync(
+            user_prompt=[
+                f"Evaluate the level of surprise of the rendered geometry.", 
+                *render_data,
+            ],
+            deps='evaluation_metrics_system',
+            output_type=Predictability_Surprise
+        ).output
+
         # Extract scores as floats
         scores = [
             float(concept_score.scores) if concept_score.scores else None,
             float(modeling_score.scores) if modeling_score.scores else None,
             float(geometric_score.scores) if geometric_score.scores else None,
+            float(sexiness_score.scores) if sexiness_score.scores else None,
+            float(ecstasy_score.scores) if ecstasy_score.scores else None,
+            float(surprise_score.scores) if surprise_score.scores else None
         ]
         # Filter out None values
         valid_scores = [s for s in scores if s]
@@ -177,9 +240,9 @@ class EvaluationAgent:
         improvement = self.agent.run_sync(
             user_prompt=[
                 "Based on the previous evaluations and scores, provide an improvement proposal focusing on the weakest aspect of these three:",
-                f"Design Concept: {concept_score}",
-                f"Modeling Strategy: {modeling_score}",
-                f"Geometric Alignment: {geometric_score}",
+                f"Sexiness: {sexiness_score}",
+                f"Ecstasy: {ecstasy_score}",
+                f"Surprise: {surprise_score}",                
             ],
             deps='evaluation_improvement_system',
             output_type=ImprovementProposal
@@ -191,6 +254,9 @@ class EvaluationAgent:
                 concept_strength=concept_score.model_dump(),
                 modeling_strategy=modeling_score.model_dump(),
                 geometric_alignment=geometric_score.model_dump(),
+                sexiness=sexiness_score.model_dump(),
+                ecstasy=ecstasy_score.model_dump(),
+                surprise=surprise_score.model_dump(),
                 average_score=average_score,
                 improvement_proposal=improvement.model_dump()
             ),
