@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     print (images)    
     # USER PROMPT: This is where you define the task for the modeling agent.
-    task = "Generate a dangerous vertical architectural structure using cubes and spheres, closely based on the reference image provided."
+    task = "Generate a dangerous vertical architectural structure using very many small cubes, closely based on the reference image provided."
 
     # OPTIONAL: Add reference_images=IMAGE_FOLDER if any.
     modeling_agent = ParametricModelingAgent()
